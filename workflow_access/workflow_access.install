@@ -17,11 +17,6 @@ function workflow_access_schema() {
         'description' => 'Primary Key: The Workflow state ID.',
         'not null' => TRUE,
       ),
-      'gid' => array(
-        'type' => 'serial',
-        'description' => 'Primary Key: The Workflow grant ID.',
-        'not null' => TRUE,
-      ),
       'role' => array(
         'type' => 'varchar',
         'length' => 64,
@@ -51,9 +46,8 @@ function workflow_access_schema() {
         'default' => 0,
       ),
     ),
-    'primary key' => array('sid', 'gid'),
+    'primary key' => array('sid', 'role'),
     'indexes' => array(
-      'gid' => array('gid'),
       'role' => array('role'),
     ),
   );
@@ -66,12 +60,6 @@ function workflow_access_schema() {
 function workflow_access_disable() {
   node_access_needs_rebuild(TRUE);
 }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function workflow_access_update_7001() { }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function workflow_access_update_7002() { }
 
 /**
  * Implements hook_update_last_removed().
@@ -134,8 +122,50 @@ function workflow_access_update_1002() {
 }
 
 /**
- * Implements hook_install().
+ * Populate the new gid column with a mapping from user roles to a unique id.
  */
-function workflow_access_install() {
-  // Dynamically generated variable data was detected.
+function workflow_access_update_1003() {
+  $config = config('workflow_access.settings');
+  $roles = user_roles();
+  $highest_gid = 0;
+  $roles_to_gids_map = [
+    WORKFLOW_ROLE_AUTHOR_RID => $highest_gid,
+  ];
+  foreach (array_keys($roles) as $name) {
+    $highest_gid++;
+    $roles_to_gids_map[$name] = $highest_gid;
+  }
+  $config->set('roles_to_gids_map', $roles_to_gids_map);
+  $config->save();
+}
+
+/**
+ * Remove the gid column from the workflow_access table.
+ */
+function workflow_access_update_1004() {
+  if (db_field_exists('workflow_access', 'gid')) {
+    db_drop_primary_key('workflow_access');
+    db_drop_index('workflow_access', 'gid');
+    db_drop_field('workflow_access', 'gid');
+    db_add_primary_key('workflow_access', array('sid', 'role'));
+  }
+}
+
+/**
+ * Ensure the anonymous and authenticated roles rids have been converted
+ * to role names.
+ */
+function workflow_access_update_1005() {
+  db_update('workflow_access')
+      ->fields(array(
+        'role' => 'anonymous',
+      ))
+      ->condition('role', 1)
+      ->execute();
+  db_update('workflow_access')
+      ->fields(array(
+        'role' => 'authenticated',
+      ))
+      ->condition('role', 2)    
+      ->execute();
 }

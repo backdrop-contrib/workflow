@@ -105,14 +105,77 @@ function workflow_access_help($path, $arg) {
 }
 
 /**
+ * Create a new node grants gid for a role.
+ *
+ * @param $role
+ *   The role name.
+ * @return
+ *   The gid.
+ */
+function workflow_access_create_gid_for_role($role) {
+  $roles_to_gids_map = config_get('workflow_access.settings', 'roles_to_gids_map');
+  $highest_gid = 0;
+  foreach ($roles_to_gids_map as $gid) {
+    if ($gid > $highest_gid) {
+      $highest_gid = $gid;
+    }
+  }
+  $new_gid = $highest_gid + 1;
+  $roles_to_gids_map[$role] = $new_gid;
+  config_set('workflow_access.settings', 'roles_to_gids_map', $roles_to_gids_map);
+  return $new_gid;
+}
+
+/**
+ * Get a list of gids for the passed in roles.
+ *
+ * @param $roles
+ *   An array of role names.
+ * @return array
+ *   An array of gids keyed by the role name.
+ */
+function workflow_access_get_gids_for_roles($roles) {
+  $roles_to_gids_map = config_get('workflow_access.settings', 'roles_to_gids_map');
+  $gids_for_roles = array();
+  foreach ($roles as $role) {
+    $gids_for_roles[$role] = $roles_to_gids_map[$role];
+  }
+  return $gids_for_roles;
+}
+
+
+/**
+ * Implements hook_user_role_insert().
+ * 
+ * When a new role is created, we need to create a new gid for it.
+ */
+function workflow_access_user_role_insert($role) {
+  workflow_access_create_gid_for_role($role->name);
+}
+
+/**
+ * Implements hook_user_role_delete().
+ *
+ * When a role is deleted, we need to delete the gid and any workflow_access
+ * settings for it.
+ */
+function workflow_access_user_role_delete($role) {
+  $roles_to_gids_map = config_get('workflow_access.settings', 'roles_to_gids_map');
+  unset($roles_to_gids_map[$role->name]);
+  config_set('workflow_access.settings', 'roles_to_gids_map', $roles_to_gids_map);
+  db_delete('workflow_access')->condition('role', $role->name)->execute();
+}
+
+/**
  * Implements hook_node_grants().
  *
  * Supply the workflow access grants. We are simply using
  * roles as access lists, so roles get translates to gids.
  */
 function workflow_access_node_grants($account, $op) {
+  $account_gids = workflow_access_get_gids_for_roles($account->roles);
   return array(
-    'workflow_access' => array_keys($account->roles),
+    'workflow_access' => array_values($account_gids),
     'workflow_access_owner' => array($account->uid),
   );
 }
@@ -176,6 +239,7 @@ function workflow_access_node_access_records($node) {
   $uid = isset($node->uid) ? $node->uid : 0;
 
   $count = 0;
+  $roles_to_gids_map = config_get('workflow_access.settings', 'roles_to_gids_map');
   foreach ($node->workflow_transitions as $transition) {
     // @todo: add support for +1 workflows per entity.
     if ($count++ == 1 ) {
@@ -188,8 +252,7 @@ function workflow_access_node_access_records($node) {
     if ($current_sid = workflow_node_current_state($node, 'node', $field_name)) {
       foreach (workflow_access_get_workflow_access_by_sid($current_sid) as $grant) {
         $realm = ($uid > 0 && $grant->role == WORKFLOW_ROLE_AUTHOR_RID) ? 'workflow_access_owner' : 'workflow_access';
-        // @todo the gid has to be an integer so need to use a new gid column in table.
-        $gid = ($uid > 0 && $grant->role == WORKFLOW_ROLE_AUTHOR_RID) ? $uid : $grant->role;
+        $gid = ($uid > 0 && $grant->role == WORKFLOW_ROLE_AUTHOR_RID) ? $uid : $roles_to_gids_map[$grant->role];
 
         // Anonymous ($uid == 0) author is not allowed for role 'author' (== -1).
         // Both logically (Anonymous having more rights then authenticated)

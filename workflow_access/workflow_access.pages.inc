@@ -76,18 +76,17 @@ function workflow_access_form($form, $form_state, Workflow $workflow) {
     foreach (workflow_access_get_workflow_access_by_sid($state->sid) as $access) {
       $count++;
       if ($access->grant_view) {
-        $view[] = $access->gid;
+        $view[] = $access->role;
       }
       if ($access->grant_update) {
-        $update[] = $access->gid;
+        $update[] = $access->role;
       }
       if ($access->grant_delete) {
-        $delete[] = $access->gid;
+        $delete[] = $access->role;
       }
     }
     // Allow view grants by default for anonymous and authenticated users,
     // if no grants were set up earlier.
-    // @todo can't use role names for grant ID.
     if (!$count) {
       $view = array(BACKDROP_ANONYMOUS_ROLE, BACKDROP_AUTHENTICATED_ROLE);
     }
