@@ -95,7 +95,7 @@ function workflow_entity_info() {
     // Do not use 'extra fields controller class'. Use hook_field_extra_fields instead.
     // 'extra fields controller class' => 'EntityPlusDefaultExtraFieldsController',
     'views controller class' => 'EntityPlusDefaultViewsController',
-    'rules controller class' => 'EntityPlusDefaultRulesController',
+    'rules controller class' => 'RulesEntityEventController',
     'features controller class' => FALSE,
     'base table' => 'workflow_node_history',
     'fieldable' => TRUE,
@@ -156,7 +156,7 @@ function workflow_entity_info() {
     'controller class' => 'WorkflowTransitionController',
     'metadata controller class' => 'EntityDefaultMetadataController',
     'views controller class' => 'EntityPlusDefaultViewsController',
-    'rules controller class' => 'EntityPlusDefaultRulesController',
+    'rules controller class' => 'RulesEntityEventController',
     'features controller class' => FALSE,
     'base table' => 'workflow_scheduled_transition',
     'entity keys' => array(
