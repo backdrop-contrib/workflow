@@ -136,6 +136,7 @@ Maintainers
 -----------
 
 - This module is not yet fully operational.
+- [Tim Erickson](https://github.com/stpaultim) - [Simplo by Triplo](https://simplo.site/)
 - Seeking maintainers.
 
 Credit
