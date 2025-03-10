@@ -749,7 +749,7 @@ function workflow_node_previous_state($entity, $entity_type, $field_name) {
     // if it is NOT the previous version.
     // The old revision from which to get our state, if it is not the revision
     // to which we want to switch.
-    $previous_entity = entity_revision_load($entity_type, $entity->old_vid);
+    $previous_entity = entity_plus_revision_load($entity_type, $entity->old_vid);
   }
   elseif (isset($entity->{$field_name}) && isset($entity->{$field_name}[$langcode][0]['workflow']['workflow_entity'])) {
     // Still using the Revisioning module, get the old revision from DB.
